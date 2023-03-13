@@ -60,16 +60,23 @@ def spiral_poses(
     radius, height,
     num_steps=20, num_rounds=1,
     center=np.array([0, 0, 0]), up=np.array([0, 1, 0]),
+    fix_y_step_ratio=None
 ):
     eyes = []
     for i in range(num_steps):
         ratio = (i + 1) / num_steps
-        Δy = height * (1 - ratio)
+        if fix_y_step_ratio is None:
+            Δy = height * (1 - ratio)
+        else:
+            Δy = height * (1 - fix_y_step_ratio)
 
         θ = ratio * (360 * num_rounds)
         θ = θ / 180 * π
         # _r = max(radius * ratio, 0.5)
-        _r = max(radius * sin(ratio * π / 2), 0.5)
+        if fix_y_step_ratio is None:
+            _r = max(radius * sin(ratio * π / 2), 0.5)
+        else:
+            _r = max(radius * sin(fix_y_step_ratio * π / 2), 0.5)
         Δx, Δz = _r * np.array([np.cos(θ), np.sin(θ)])
         eyes.append(center + [Δx, Δy, Δz])
 
@@ -83,6 +90,7 @@ class PoseConfig(BaseConf):
     rend_hw: int = 64
     FoV: float = 60.0
     R: float = 1.5
+    fix_y_step_ratio: float = None
 
     def make(self):
         cfgs = self.dict()
@@ -93,10 +101,11 @@ class PoseConfig(BaseConf):
 
 
 class Poser():
-    def __init__(self, H, W, FoV, R):
+    def __init__(self, H, W, FoV, R, fix_y_step_ratio=None):
         self.H, self.W = H, W
         self.R = R
         self.K = get_K(H, W, FoV)
+        self.fix_y_step_ratio = fix_y_step_ratio
 
     def sample_train(self, n):
         eyes, prompts = train_eye_with_prompts(r=self.R, n=n)
@@ -115,6 +124,6 @@ class Poser():
         return random_Ks, poses, prompts
 
     def sample_test(self, n):
-        poses = spiral_poses(self.R, self.R, n, num_rounds=3)
+        poses = spiral_poses(self.R, self.R, n, num_rounds=1, fix_y_step_ratio=self.fix_y_step_ratio)
         poses = np.stack(poses, axis=0)
         return self.K, poses

@@ -266,8 +266,9 @@ def vis_routine(metric, y, depth):
     metric.put_artifact("depth", ".npy", lambda fn: np.save(fn, depth))
 
 
-def evaluate_ckpt():
+def evaluate_ckpt(output_dir=None, ckpt_dir="./ckpt", fix_y_step_ratio=None):
     cfg = optional_load_config(fname="full_config.yml")
+    cfg['pose']['fix_y_step_ratio'] = fix_y_step_ratio
     assert len(cfg) > 0, "can't find cfg file"
     mod = SJC(**cfg)
 
@@ -279,22 +280,25 @@ def evaluate_ckpt():
     pbar = tqdm(range(1))
 
     with EventStorage(), HeartBeat(pbar):
-        ckpt_fname = latest_ckpt()
+        ckpt_fname = latest_ckpt(ckpt_dir)
         state = torch.load(ckpt_fname, map_location="cpu")
         vox.load_state_dict(state)
         vox.to(device_glb)
 
-        with EventStorage("test"):
+        if output_dir is None:
+            import datetime
+            output_dir = f'output_eval/{cfg["sd"]["prompt"]}_eval_at_{datetime.datetime.now()}'
+        with EventStorage(output_dir):
             evaluate(model, vox, poser)
 
 
-def latest_ckpt():
-    ts, ys = read_stats("./", "ckpt")
+def latest_ckpt(ckpt_dir="./"):
+    ts, ys = read_stats(ckpt_dir, "ckpt")
     assert len(ys) > 0
     return ys[-1]
 
 
 if __name__ == "__main__":
     seed_everything(0)
-    dispatch(SJC)
-    # evaluate_ckpt()
+    # dispatch(SJC)
+    evaluate_ckpt(ckpt_dir='output/a jumping rabbit/2023-03-10 01:59:04.533434_10000', fix_y_step_ratio=1.0-math.sin(math.pi/6))
