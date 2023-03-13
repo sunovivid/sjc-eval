@@ -19,9 +19,9 @@ def SingleOrList(inner_type):
     return Union[inner_type, List[inner_type]]
 
 
-def optional_load_config(fname="config.yml"):
+def optional_load_config(fname="config.yml", ckpt_dir=''):
     cfg = {}
-    conf_fname = Path.cwd() / fname
+    conf_fname = Path.cwd() / ckpt_dir / fname
     if conf_fname.is_file():
         with conf_fname.open("r") as f:
             raw = f.read()

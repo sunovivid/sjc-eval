@@ -268,7 +268,7 @@ def vis_routine(metric, y, depth):
 
 
 def evaluate_ckpt(output_dir=None, ckpt_dir="./ckpt", fix_y_step_ratio=None, skip_make_video=False):
-    cfg = optional_load_config(fname="full_config.yml")
+    cfg = optional_load_config(fname="full_config.yml", ckpt_dir=ckpt_dir)
     cfg['pose']['fix_y_step_ratio'] = fix_y_step_ratio
     assert len(cfg) > 0, "can't find cfg file"
     mod = SJC(**cfg)
@@ -291,7 +291,7 @@ def evaluate_ckpt(output_dir=None, ckpt_dir="./ckpt", fix_y_step_ratio=None, ski
             output_dir = f'output_eval/{cfg["sd"]["prompt"]}/{datetime.datetime.now()}'
         with EventStorage(output_dir):
             evaluate(model, vox, poser)
-
+    return output_dir
 
 def latest_ckpt(ckpt_dir="./"):
     ts, ys = read_stats(ckpt_dir, "ckpt")
@@ -320,12 +320,31 @@ def get_latest_folder_name(folder_path):
     return latest_folder
 
 
+import os
+import shutil
+
+def copy_files_to_baseline(output_dir, prompt):
+    src_folder = os.path.join(output_dir, "img")
+    dst_folder = os.path.join("..", "colmap_evaluation", prompt, "baseline")
+
+    # Make sure the destination folder exists
+    os.makedirs(dst_folder, exist_ok=True)
+
+    # Copy all files from src_folder to dst_folder
+    for filename in os.listdir(src_folder):
+        src_path = os.path.join(src_folder, filename)
+        dst_path = os.path.join(dst_folder, filename)
+        shutil.copy2(src_path, dst_path)
+
+
+
 if __name__ == "__main__":
     seed_everything(0)
     # dispatch(SJC)
-    import sys
-    prompt = sys.argv[1]
+    # import sys
+    prompt = "a pig wearing a backpack" # sys.argv[1]
     prompt_dir = f'output/{prompt}/'
     ckpt_dir = prompt_dir + get_latest_folder_name(prompt_dir)
     print(ckpt_dir)
-    evaluate_ckpt(ckpt_dir=ckpt_dir, fix_y_step_ratio=1.0-math.sin(math.pi/6), skip_make_video=False)
+    output_dir = evaluate_ckpt(ckpt_dir=ckpt_dir, fix_y_step_ratio=1.0-math.sin(math.pi/6), skip_make_video=False)
+    copy_files_to_baseline(output_dir=output_dir, prompt=prompt)
