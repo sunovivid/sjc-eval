@@ -6,7 +6,7 @@ import argparse
 from argparse import RawDescriptionHelpFormatter
 import yaml
 from pydantic import BaseModel as _Base
-
+import os
 
 class BaseConf(_Base):
     class Config:
@@ -31,12 +31,21 @@ def optional_load_config(fname="config.yml"):
     return cfg
 
 
-def write_full_config(cfg_obj, fname="full_config.yml"):
-    cfg = cfg_obj.dict()
-    cfg = _dict_to_yaml(cfg)
-    print(f"\n--- full config ---\n\n{cfg}\n")
-    with (Path.cwd() / fname).open("w") as f:
+def write_full_config(cfg, fname="full_config.yml", output_dir=''):
+    path = Path.cwd() / output_dir
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    with (path / fname).open("w") as f:
         f.write(cfg)
+
+
+# def write_full_config(cfg_obj, fname="full_config.yml"):
+#     cfg = cfg_obj.dict()
+#     cfg = _dict_to_yaml(cfg)
+#     print(f"\n--- full config ---\n\n{cfg}\n")
+#     with (Path.cwd() / fname).open("w") as f:
+#         f.write(cfg)
 
 
 def argparse_cfg_template(curr_cfgs):
@@ -71,10 +80,18 @@ def dispatch(module):
     cfg = argparse_cfg_template(cfg)  # cmdline takes priority
     mod = module(**cfg)
 
-    write_full_config(mod)
+    import datetime
+    prompt = cfg['sd']['prompt']
+    n_stpes = cfg['n_steps']
+    now = datetime.datetime.now()
+    output_dir = f'output/{prompt}/{now}'
 
-    mod.run()
+    cfg = mod.dict()
+    cfg = _dict_to_yaml(cfg)
+    print(f"\n--- full config ---\n\n{cfg}\n")
 
+    mod.run(output_dir)
+    write_full_config(cfg, output_dir=f'{output_dir}_{n_stpes}')
 
 # below are some support tools
 

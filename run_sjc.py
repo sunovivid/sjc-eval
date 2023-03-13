@@ -70,7 +70,7 @@ class SJC(BaseConf):
             vox_cfg.c = 4
         return vox_cfg
 
-    def run(self):
+    def run(self, output_dir):
         cfgs = self.dict()
 
         family = cfgs.pop("family")
@@ -82,15 +82,17 @@ class SJC(BaseConf):
         cfgs.pop("pose")
         poser = self.pose.make()
 
-        sjc_3d(**cfgs, poser=poser, model=model, vox=vox)
+        sjc_3d(**cfgs, poser=poser, model=model, vox=vox, output_dir=output_dir)
 
 
 def sjc_3d(
     poser, vox, model: ScoreAdapter,
     lr, n_steps, emptiness_scale, emptiness_weight, emptiness_step, emptiness_multiplier,
-    depth_weight, var_red, **kwargs
+    depth_weight, var_red, output_dir, **kwargs
 ):
     del kwargs
+
+    output_dir_with_steps = f'./{output_dir}_{n_steps}'
 
     assert model.samps_centered()
     _, target_H, target_W = model.data_shape()
@@ -109,7 +111,7 @@ def sjc_3d(
 
     with tqdm(total=n_steps) as pbar, \
         HeartBeat(pbar) as hbeat, \
-            EventStorage() as metric:
+            EventStorage(output_dir_with_steps) as metric:
         for i in range(n_steps):
             if fuse.on_break():
                 break
@@ -186,7 +188,7 @@ def sjc_3d(
         metric.put_artifact(
             "ckpt", ".pt", lambda fn: torch.save(vox.state_dict(), fn)
         )
-        with EventStorage("test"):
+        with EventStorage('./eval'):
             evaluate(model, vox, poser)
 
         metric.step()
