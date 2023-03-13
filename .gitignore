@@ -1,5 +1,12 @@
 *.png
-
+test_*/**
+heartbeat.json
+history.json
+depth/**
+output/**
+output_*/**
+env.json
+full_config.yml
 # sd1/
 # sd2/
 
