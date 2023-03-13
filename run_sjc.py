@@ -197,7 +197,7 @@ def sjc_3d(
 
 
 @torch.no_grad()
-def evaluate(score_model, vox, poser):
+def evaluate(score_model, vox, poser, skip_make_video=False):
     H, W = poser.H, poser.W
     vox.eval()
     K, poses = poser.sample_test(100)
@@ -226,10 +226,11 @@ def evaluate(score_model, vox, poser):
 
     metric.flush_history()
 
-    metric.put_artifact(
-        "view_seq", ".mp4",
-        lambda fn: stitch_vis(fn, read_stats(metric.output_dir, "view")[1])
-    )
+    if not skip_make_video:
+        metric.put_artifact(
+            "view_seq", ".mp4",
+            lambda fn: stitch_vis(fn, read_stats(metric.output_dir, "view")[1])
+        )
 
     metric.step()
 
@@ -266,7 +267,7 @@ def vis_routine(metric, y, depth):
     metric.put_artifact("depth", ".npy", lambda fn: np.save(fn, depth))
 
 
-def evaluate_ckpt(output_dir=None, ckpt_dir="./ckpt", fix_y_step_ratio=None):
+def evaluate_ckpt(output_dir=None, ckpt_dir="./ckpt", fix_y_step_ratio=None, skip_make_video=False):
     cfg = optional_load_config(fname="full_config.yml")
     cfg['pose']['fix_y_step_ratio'] = fix_y_step_ratio
     assert len(cfg) > 0, "can't find cfg file"
@@ -298,7 +299,33 @@ def latest_ckpt(ckpt_dir="./"):
     return ys[-1]
 
 
+import os
+from datetime import datetime
+
+def get_latest_folder_name(folder_path):
+    folders = os.listdir(folder_path)
+
+    # Filter out non-folder items
+    folders = [f for f in folders if os.path.isdir(os.path.join(folder_path, f))]
+
+    # Convert folder names to datetime objects
+    folder_datetimes = [datetime.strptime(f[:23], '%Y-%m-%d %H:%M:%S.%f') for f in folders]
+
+    # Get the index of the latest datetime
+    latest_index = folder_datetimes.index(max(folder_datetimes))
+
+    # Get the latest folder name
+    latest_folder = folders[latest_index]
+    
+    return latest_folder
+
+
 if __name__ == "__main__":
     seed_everything(0)
     # dispatch(SJC)
-    evaluate_ckpt(ckpt_dir='output/a jumping rabbit/2023-03-10 01:59:04.533434_10000', fix_y_step_ratio=1.0-math.sin(math.pi/6))
+    import sys
+    prompt = sys.argv[1]
+    prompt_dir = f'output/{prompt}/'
+    ckpt_dir = prompt_dir + get_latest_folder_name(prompt_dir)
+    print(ckpt_dir)
+    evaluate_ckpt(ckpt_dir=ckpt_dir, fix_y_step_ratio=1.0-math.sin(math.pi/6), skip_make_video=False)
