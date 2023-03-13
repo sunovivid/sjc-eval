@@ -288,7 +288,7 @@ def evaluate_ckpt(output_dir=None, ckpt_dir="./ckpt", fix_y_step_ratio=None, ski
 
         if output_dir is None:
             import datetime
-            output_dir = f'output_eval/{cfg["sd"]["prompt"]}_eval_at_{datetime.datetime.now()}'
+            output_dir = f'output_eval/{cfg["sd"]["prompt"]}/{datetime.datetime.now()}'
         with EventStorage(output_dir):
             evaluate(model, vox, poser)
 
