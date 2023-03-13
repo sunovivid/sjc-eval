@@ -324,7 +324,7 @@ import os
 import shutil
 
 def copy_files_to_baseline(output_dir, prompt):
-    src_folder = os.path.join(output_dir, "img")
+    src_folder = os.path.join(f'{output_dir}_0', "img")
     dst_folder = os.path.join("..", "colmap_evaluation", prompt, "baseline")
 
     # Make sure the destination folder exists
